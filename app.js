@@ -1,127 +1,21 @@
 /* ==========================================================================
-   Apktool Traditional Chinese Showcase - Interactive JavaScript Application
+   Apktool Traditional Chinese Showcase - Real Engine Implementation (JSZip)
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- Mock Sample Data Store ---
-    const sampleFiles = {
-        'demo_app': {
-            'AndroidManifest.xml': `<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.demoapp"
-    android:versionCode="100"
-    android:versionName="1.0.0">
-
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:theme="@style/AppTheme">
-
-        <activity android:name=".MainActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>`,
-
-            'apktool.yml': `version: 2.9.3
-apkFileName: DemoApp_v1.0.apk
-isFrameworkApk: false
-usesFramework:
-  ids: [1]
-sdkInfo:
-  minSdkVersion: '21'
-  targetSdkVersion: '33'
-packageInfo:
-  curPackage: com.example.demoapp
-  origPackage: com.example.demoapp
-versionInfo:
-  versionCode: '100'
-  versionName: 1.0.0
-doNotCompress:
-- arsc
-- png`,
-
-            'res/values/strings.xml': `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Apktool 繁體中文示範應用</string>
-    <string name="welcome_message">歡迎使用 Apktool 線上動態反編譯模擬器！</string>
-    <string name="btn_login">登入系統</string>
-    <string name="status_ready">系統運作正常</string>
-</resources>`,
-
-            'smali/com/example/MainActivity.smali': `.class public Lcom/example/demoapp/MainActivity;
-.super Landroidx/appcompat/app/AppCompatActivity;
-.source "MainActivity.java"
-
-# static fields
-.field private static final TAG:Ljava/lang/String; = "MainActivity"
-
-# direct methods
-.method public constructor <init>()V
-    .registers 1
-
-    .line 12
-    invoke-direct {p0}, Landroidx/appcompat/app/AppCompatActivity;-><init>()V
-
-    return-void
-.end method
-
-# virtual methods
-.method protected onCreate(Landroid/os/Bundle;)V
-    .registers 3
-    .param p1, "savedInstanceState"    # Landroid/os/Bundle;
-
-    .line 16
-    invoke-super {p0, p1}, Landroidx/appcompat/app/AppCompatActivity;->onCreate(Landroid/os/Bundle;)V
-
-    const v0, 0x7f0b001c
-
-    .line 17
-    invoke-virtual {p0, v0}, Lcom/example/demoapp/MainActivity;->setContentView(I)V
-
-    .line 18
-    const-string v0, "Apktool Traditional Chinese Version Loaded"
-    
-    invoke-static {v0}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
-
-    return-void
-.end method`
-        },
-        'game_mod': {
-            'AndroidManifest.xml': `<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.game.modded">
-    <application android:label="@string/game_title">
-        <activity android:name=".GameActivity" />
-    </application>
-</manifest>`,
-            'apktool.yml': `version: 2.9.3\napkFileName: GameMod_v2.4.apk\nminSdkVersion: '24'`,
-            'res/values/strings.xml': `<resources>\n    <string name="game_title">超級動作遊戲 (無敵 MOD)</string>\n    <string name="coins">金幣: 999999</string>\n</resources>`,
-            'smali/com/game/Player.smali': `.class public Lcom/game/Player;\n.method public getHealth()I\n    const/16 v0, 0x2710 # 10000 HP\n    return v0\n.end method`
-        },
-        'sys_framework': {
-            'AndroidManifest.xml': `<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="android" coreApp="true">\n</manifest>`,
-            'apktool.yml': `version: 2.9.3\nisFrameworkApk: true\npackageInfo:\n  pkgId: '01'`,
-            'res/values/strings.xml': `<resources>\n    <string name="ok">確定</string>\n    <string name="cancel">取消</string>\n</resources>`
-        }
-    };
-
-    let activeSampleKey = 'demo_app';
-    let currentDecompiledData = null;
+    // Global Working Memory for Uploaded & Extracted APK
+    let currentZipFiles = {}; // Holds path -> Uint8Array / String
+    let loadedZip = null;
     let selectedFilePath = null;
+    let originalFileName = 'app-release.apk';
+    let rebuiltBlob = null;
 
     // DOM Elements
     const sampleSelect = document.getElementById('sample-select');
     const btnDecode = document.getElementById('btn-decode');
     const btnBuild = document.getElementById('btn-build');
+    const btnDownloadApk = document.getElementById('btn-download-apk');
     const treePlaceholder = document.getElementById('tree-placeholder');
     const fileTreeRoot = document.getElementById('file-tree-root');
     const codeEditor = document.getElementById('code-editor');
@@ -132,8 +26,16 @@ doNotCompress:
     const btnSaveFile = document.getElementById('btn-save-file');
     const editorStatus = document.getElementById('editor-status');
     const dropzone = document.getElementById('dropzone');
+    const dropzoneInput = document.createElement('input');
 
-    // --- Logging Function ---
+    dropzoneInput.type = 'file';
+    dropzoneInput.accept = '.apk,.zip';
+    dropzoneInput.style.display = 'none';
+    document.body.appendChild(dropzoneInput);
+
+    let selectedFileObject = null;
+
+    // Logging helper
     function log(msg, type = 'info') {
         const time = new Date().toLocaleTimeString('zh-TW', { hour12: false });
         const line = document.createElement('div');
@@ -147,144 +49,227 @@ doNotCompress:
         consoleLog.innerHTML = '<div class="log-line info">[資訊] 日誌已清理。</div>';
     });
 
-    // --- Decode Action (apktool d) ---
-    btnDecode.addEventListener('click', () => {
-        activeSampleKey = sampleSelect.value;
-        const sampleName = sampleSelect.options[sampleSelect.selectedIndex].text;
-
-        log(`開始執行反編譯命令: apktool d ${sampleName} -o output_dir`, 'ready');
-        btnDecode.disabled = true;
-        btnBuild.disabled = true;
-
-        setTimeout(() => log(`I: 使用 Apktool v3.0.0 (繁體中文版)`), 300);
-        setTimeout(() => log(`I: 正在載入並解析資源數據表 (resources.arsc)...`), 600);
-        setTimeout(() => log(`I: 解碼 AndroidManifest.xml 檔案...`), 900);
-        setTimeout(() => log(`I: 呼叫 Baksmali 轉譯 Dex 位元組碼 -> Smali 組合語言...`), 1200);
-        setTimeout(() => log(`I: 處理 9-patch 圖像與 XML 佈局樣式...`), 1600);
-        setTimeout(() => log(`I: 生成建置屬性設定檔 (apktool.yml)...`), 1900);
-
-        setTimeout(() => {
-            log(`S: APK 解碼完成！已建立目錄結構: ./output_dir/`, 'success');
-            currentDecompiledData = JSON.parse(JSON.stringify(sampleFiles[activeSampleKey]));
-            renderFileTree();
-            btnDecode.disabled = false;
-            btnBuild.disabled = false;
-        }, 2200);
+    // File Selector Dropzone Trigger
+    dropzone.addEventListener('click', () => {
+        dropzoneInput.click();
     });
 
-    // --- Build Action (apktool b) ---
-    btnBuild.addEventListener('click', () => {
-        log(`開始執行回編譯命令: apktool b output_dir -o new_rebuilt.apk --use-aapt2`, 'ready');
-        btnBuild.disabled = true;
-
-        setTimeout(() => log(`I: 正在檢查修訂檔案變更標籤...`), 300);
-        setTimeout(() => log(`I: 呼叫 Smali 彙編器組裝 .smali 代碼 -> classes.dex...`), 700);
-        setTimeout(() => log(`I: 呼叫 AAPT2 編譯資源檔 (res/values/strings.xml)...`), 1100);
-        setTimeout(() => log(`I: 封裝二進位 APK 檔案結構...`), 1500);
-
-        setTimeout(() => {
-            log(`S: 回編譯成功！產出檔案: new_rebuilt.apk (容量: 3.4 MB)`, 'success');
-            log(`W: 提示：此新建構之 APK 尚需進行數位金鑰簽署 (apksigner) 即可安裝。`, 'warning');
-            btnBuild.disabled = false;
-        }, 1900);
-    });
-
-    // --- File Tree Renderer ---
-    function renderFileTree() {
-        treePlaceholder.classList.add('hidden');
-        fileTreeRoot.classList.remove('hidden');
-        fileTreeRoot.innerHTML = '';
-
-        if (!currentDecompiledData) return;
-
-        const files = Object.keys(currentDecompiledData);
-
-        files.forEach((path, index) => {
-            const li = document.createElement('li');
-            const fileItem = document.createElement('div');
-            fileItem.className = 'tree-item';
-            
-            let iconClass = 'fa-file-code';
-            if (path.endsWith('.xml')) iconClass = 'fa-file-excel';
-            if (path.endsWith('.yml')) iconClass = 'fa-gear';
-            if (path.endsWith('.smali')) iconClass = 'fa-code';
-
-            fileItem.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span>${path}</span>`;
-            
-            fileItem.addEventListener('click', () => {
-                document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
-                fileItem.classList.add('active');
-                openFile(path);
-            });
-
-            li.appendChild(fileItem);
-            fileTreeRoot.appendChild(li);
-
-            if (index === 0) {
-                fileItem.classList.add('active');
-                openFile(path);
-            }
-        });
-    }
-
-    // --- Open File in Code Editor ---
-    function openFile(path) {
-        selectedFilePath = path;
-        currentFilename.textContent = path;
-        codeEditor.value = currentDecompiledData[path] || '';
-        
-        let ext = path.split('.').pop().toUpperCase();
-        fileTypeTag.textContent = ext;
-        editorStatus.innerHTML = `<i class="fa-solid fa-file-pen"></i> 目前檢視: ${path}`;
-    }
-
-    // --- Save File Changes ---
-    btnSaveFile?.addEventListener('click', () => {
-        if (selectedFilePath && currentDecompiledData) {
-            currentDecompiledData[selectedFilePath] = codeEditor.value;
-            editorStatus.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> 變更已暫存！可點擊「執行回編譯」驗證打包。`;
-            log(`[編輯器] 已更新暫存內容: ${selectedFilePath}`, 'info');
+    dropzoneInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            selectedFileObject = e.target.files[0];
+            originalFileName = selectedFileObject.name;
+            dropzone.querySelector('span').textContent = `已選擇: ${originalFileName} (${(selectedFileObject.size / (1024*1024)).toFixed(2)} MB)`;
+            log(`已選擇本地檔案: ${originalFileName}。點擊「解構 APK 檔案」開始實際解包處理。`, 'warning');
         }
     });
 
-    // --- Drag and Drop File Upload Mock ---
-    dropzone?.addEventListener('dragover', (e) => {
+    dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropzone.classList.add('dragover');
     });
 
-    dropzone?.addEventListener('dragleave', () => {
+    dropzone.addEventListener('dragleave', () => {
         dropzone.classList.remove('dragover');
     });
 
-    dropzone?.addEventListener('drop', (e) => {
+    dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
         dropzone.classList.remove('dragover');
-
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const fileName = files[0].name;
-            log(`接收上傳檔案: ${fileName}。載入自訂測試模式...`, 'warning');
-            
-            // Add custom file entry
-            sampleFiles['custom'] = {
-                'AndroidManifest.xml': `<?xml version="1.0" encoding="utf-8"?>\n<manifest package="com.user.custom">\n    <application android:label="${fileName}" />\n</manifest>`,
-                'apktool.yml': `version: 3.0.0\napkFileName: ${fileName}`,
-                'smali/CustomClass.smali': `.class public Lcom/user/CustomClass;\n.super Ljava/lang/Object;`
-            };
-
-            const opt = document.createElement('option');
-            opt.value = 'custom';
-            opt.text = `${fileName} (拖放上傳)`;
-            sampleSelect.appendChild(opt);
-            sampleSelect.value = 'custom';
-            
-            btnDecode.click();
+        if (e.dataTransfer.files.length > 0) {
+            selectedFileObject = e.dataTransfer.files[0];
+            originalFileName = selectedFileObject.name;
+            dropzone.querySelector('span').textContent = `已選擇: ${originalFileName} (${(selectedFileObject.size / (1024*1024)).toFixed(2)} MB)`;
+            log(`已拖放檔案: ${originalFileName}。請點擊「解構 APK 檔案」開始解壓與分析。`, 'warning');
         }
     });
 
+    // --- Core Action: Real Unpacking (apktool d) ---
+    btnDecode.addEventListener('click', async () => {
+        btnDecode.disabled = true;
+        btnBuild.disabled = true;
+        btnDownloadApk.style.display = 'none';
+        currentZipFiles = {};
+        fileTreeRoot.innerHTML = '';
+        codeEditor.value = '';
+
+        log(`開始執行真實解包流程: ${originalFileName}...`, 'ready');
+
+        try {
+            if (typeof JSZip === 'undefined') {
+                throw new Error("JSZip 函式庫未載入，請確認網路連線。");
+            }
+
+            let zipDataBuffer;
+
+            if (selectedFileObject) {
+                log(`正在讀取本地 APK 二進位串流...`);
+                zipDataBuffer = await selectedFileObject.arrayBuffer();
+            } else {
+                log(`未選擇本地檔案，建立內部結構測試解構模式...`);
+                const zip = new JSZip();
+                zip.file("AndroidManifest.xml", `<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.demo.real">\n    <application android:label="Demomode">\n        <activity android:name=".MainActivity" />\n    </application>\n</manifest>`);
+                zip.file("apktool.yml", `version: 3.0.0\napkFileName: ${originalFileName}\nisFrameworkApk: false\npackageInfo:\n  curPackage: com.demo.real`);
+                zip.file("res/values/strings.xml", `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="app_name">真實解包與打包示範</string>\n    <string name="welcome">本網頁支援真實檔案解壓與重構打包</string>\n</resources>`);
+                zip.file("smali/com/demo/real/MainActivity.smali", `.class public Lcom/demo/real/MainActivity;\n.super Landroid/app/Activity;\n\n.method public constructor <init>()V\n    invoke-direct {p0}, Landroid/app/Activity;-><init>()V\n    return-void\n.end method`);
+                zipDataBuffer = await zip.generateAsync({ type: "arraybuffer" });
+            }
+
+            log(`正在提取並解析 ZIP / APK 二進位壓縮檔目錄與位元組...`);
+            loadedZip = await JSZip.loadAsync(zipDataBuffer);
+
+            const filePaths = Object.keys(loadedZip.files);
+            log(`解包成功！共讀取到 ${filePaths.length} 個內部實體檔案。`, 'success');
+
+            for (const path of filePaths) {
+                const zipEntry = loadedZip.files[path];
+                if (!zipEntry.dir) {
+                    if (isTextFile(path)) {
+                        const textContent = await zipEntry.async("string");
+                        currentZipFiles[path] = textContent;
+                    } else {
+                        const binaryContent = await zipEntry.async("uint8array");
+                        currentZipFiles[path] = binaryContent;
+                    }
+                }
+            }
+
+            renderRealFileTree();
+            btnDecode.disabled = false;
+            btnBuild.disabled = false;
+
+        } catch (err) {
+            log(`[錯誤] APK 解包失敗: ${err.message}`, 'error');
+            btnDecode.disabled = false;
+        }
+    });
+
+    // Check if path is text/editable
+    function isTextFile(path) {
+        const textExtensions = ['.xml', '.yml', '.txt', '.smali', '.json', '.properties', '.html', '.css', '.js'];
+        return textExtensions.some(ext => path.toLowerCase().endsWith(ext));
+    }
+
+    // --- Render Real Tree ---
+    function renderRealFileTree() {
+        treePlaceholder.classList.add('hidden');
+        fileTreeRoot.classList.remove('hidden');
+        fileTreeRoot.innerHTML = '';
+
+        const paths = Object.keys(currentZipFiles);
+        if (paths.length === 0) return;
+
+        paths.forEach((path, index) => {
+            const li = document.createElement('li');
+            const fileItem = document.createElement('div');
+            fileItem.className = 'tree-item';
+
+            let iconClass = 'fa-file';
+            if (path.endsWith('.xml')) iconClass = 'fa-file-excel';
+            if (path.endsWith('.yml')) iconClass = 'fa-gear';
+            if (path.endsWith('.smali')) iconClass = 'fa-code';
+            if (path.endsWith('.dex')) iconClass = 'fa-box';
+            if (path.endsWith('.arsc')) iconClass = 'fa-database';
+
+            const isBinary = !isTextFile(path);
+            const badge = isBinary ? '<span class="file-tag" style="font-size:0.65rem; padding:1px 4px; margin-left:auto;">BIN</span>' : '';
+
+            fileItem.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${path}</span> ${badge}`;
+
+            fileItem.addEventListener('click', () => {
+                document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('active'));
+                fileItem.classList.add('active');
+                openRealFile(path);
+            });
+
+            fileTreeRoot.appendChild(li);
+            li.appendChild(fileItem);
+
+            if (index === 0) {
+                fileItem.classList.add('active');
+                openRealFile(path);
+            }
+        });
+    }
+
+    // --- Open File ---
+    function openRealFile(path) {
+        selectedFilePath = path;
+        currentFilename.textContent = path;
+        const data = currentZipFiles[path];
+
+        if (typeof data === 'string') {
+            codeEditor.readOnly = false;
+            codeEditor.value = data;
+            fileTypeTag.textContent = '文字可編輯';
+            editorStatus.innerHTML = `<i class="fa-solid fa-file-pen"></i> 正檢視可編輯文字檔: ${path}`;
+        } else {
+            codeEditor.readOnly = true;
+            codeEditor.value = `[二進位檔案 / Binary File: ${path}]\n容量大小: ${(data.byteLength / 1024).toFixed(2)} KB\n二進位檔 (如 .dex, .arsc, 圖片) 無法直接作為純文字檢視，打包時將保持原樣寫回。`;
+            fileTypeTag.textContent = '二進位檔 (唯讀)';
+            editorStatus.innerHTML = `<i class="fa-solid fa-lock"></i> 二進位檔案只讀保護中`;
+        }
+    }
+
+    // --- Save Modified Text File ---
+    btnSaveFile?.addEventListener('click', () => {
+        if (selectedFilePath && typeof currentZipFiles[selectedFilePath] === 'string') {
+            currentZipFiles[selectedFilePath] = codeEditor.value;
+            log(`[儲存成功] 檔案變更已寫入網頁運作記憶體: ${selectedFilePath}`, 'success');
+            editorStatus.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> 修改已儲存！點擊「重構打包 APK」即可打包產出新檔。`;
+        }
+    });
+
+    // --- Core Action: Real Repackaging & Zip Creation (apktool b) ---
+    btnBuild.addEventListener('click', async () => {
+        btnBuild.disabled = true;
+        log(`開始執行真實二進位打包與壓縮流程...`, 'ready');
+
+        try {
+            const zip = new JSZip();
+
+            for (const path of Object.keys(currentZipFiles)) {
+                const content = currentZipFiles[path];
+                zip.file(path, content);
+            }
+
+            log(`正在以 DEFLATE 壓縮演算法封裝二進位包 (APK)...`);
+            rebuiltBlob = await zip.generateAsync({
+                type: "blob",
+                compression: "DEFLATE",
+                compressionOptions: { level: 6 }
+            });
+
+            const sizeMB = (rebuiltBlob.size / (1024 * 1024)).toFixed(2);
+            log(`S: 重構打包成功！正式生成全新二進位 APK 檔案 (${sizeMB} MB)`, 'success');
+            
+            btnDownloadApk.style.display = 'inline-flex';
+            btnBuild.disabled = false;
+
+        } catch (err) {
+            log(`[錯誤] 打包過程中發生例外: ${err.message}`, 'error');
+            btnBuild.disabled = false;
+        }
+    });
+
+    // --- Download Rebuilt APK ---
+    btnDownloadApk?.addEventListener('click', () => {
+        if (!rebuiltBlob) return;
+
+        const downloadUrl = URL.createObjectURL(rebuiltBlob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        const outName = originalFileName.replace(/\.apk$/i, '') + '_rebuilt.apk';
+        a.download = outName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        log(`已觸發瀏覽器下載檔案: ${outName}`, 'success');
+    });
+
     // ==========================================================================
-    // CLI Command Generator Logic
+    // CLI Command Helper & Smali Search & Doc Tabs Logic
     // ==========================================================================
     const modeRadios = document.querySelectorAll('input[name="mode"]');
     const inputPath = document.getElementById('cli-input-path');
@@ -373,9 +358,7 @@ doNotCompress:
         });
     });
 
-    // ==========================================================================
-    // Smali Search Filter
-    // ==========================================================================
+    // Smali Search
     const smaliSearch = document.getElementById('smali-search');
     const smaliCards = document.querySelectorAll('.smali-card');
 
@@ -383,17 +366,11 @@ doNotCompress:
         const query = e.target.value.toLowerCase().trim();
         smaliCards.forEach(card => {
             const text = card.textContent.toLowerCase();
-            if (text.includes(query)) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
+            card.style.display = text.includes(query) ? 'block' : 'none';
         });
     });
 
-    // ==========================================================================
-    // Documentation Tabs Logic
-    // ==========================================================================
+    // Documentation Tabs
     const docTabs = document.querySelectorAll('.doc-tab-btn');
     const docPanes = document.querySelectorAll('.doc-pane');
 
