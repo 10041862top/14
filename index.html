@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apktool 繁體中文版 - APK 反編譯與回編譯線上展示平臺</title>
+    <meta name="description" content="Apktool 繁體中文開放原始碼專案展示網頁。提供線上 APK 反編譯/回編譯模擬器、Smali 編輯器、CLI 指令生成器與完整繁體中文文件教學。">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="#" class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-cube"></i>
+                </div>
+                <div class="brand-text">
+                    <span class="title">Apktool</span>
+                    <span class="badge">繁體中文版</span>
+                </div>
+            </a>
+            <nav class="nav-links">
+                <a href="#simulator" class="active"><i class="fa-solid fa-laptop-code"></i> 線上模擬器</a>
+                <a href="#cli-generator"><i class="fa-solid fa-terminal"></i> CLI 指令生成器</a>
+                <a href="#smali-guide"><i class="fa-solid fa-book-bookmark"></i> Smali 語法字典</a>
+                <a href="#architecture"><i class="fa-solid fa-sitemap"></i> 架構流程</a>
+                <a href="#docs"><i class="fa-solid fa-file-lines"></i> 繁中說明檔</a>
+            </nav>
+            <div class="nav-actions">
+                <a href="https://github.com/10041862top/14" target="_blank" class="btn btn-git">
+                    <i class="fa-brands fa-github"></i> 10041862top/14
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="content-wrapper">
+
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-glow"></div>
+            <div class="hero-content">
+                <div class="status-tags">
+                    <span class="tag tag-primary"><i class="fa-solid fa-sparkles"></i> 繁體中文在地化</span>
+                    <span class="tag tag-success"><i class="fa-solid fa-shield-halved"></i> Apache 2.0 授權</span>
+                    <span class="tag tag-info"><i class="fa-solid fa-code-branch"></i> Git Repository: 10041862top/14</span>
+                </div>
+                <h1 class="hero-title">
+                    Android APK 逆向工程 <br>
+                    <span class="gradient-text">反編譯與回編譯強大工具</span>
+                </h1>
+                <p class="hero-description">
+                    Apktool 能夠將 Android APK 二進位檔案拆解為接近原始開發狀態的資源檔（`AndroidManifest.xml`、`resources.arsc`、佈局與 XML）與 Smali 組合語言，並支援在進行修訂後完美重新封裝與構建新 APK。
+                </p>
+                <div class="hero-buttons">
+                    <a href="#simulator" class="btn btn-glow"><i class="fa-solid fa-play"></i> 立即體驗線上模擬器</a>
+                    <a href="#cli-generator" class="btn btn-secondary"><i class="fa-solid fa-terminal"></i> 指令快速生成</a>
+                </div>
+            </div>
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <i class="fa-solid fa-file-code"></i>
+                    <div class="stat-num">Smali</div>
+                    <div class="stat-label">Dex 自動轉 Smali 組合碼</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-gears"></i>
+                    <div class="stat-num">AAPT2</div>
+                    <div class="stat-label">相容最新 Android SDK</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-language"></i>
+                    <div class="stat-num">全繁中</div>
+                    <div class="stat-label">完整中文介面與說明文件</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Sandbox Simulator Section -->
+        <section id="simulator" class="section-container">
+            <div class="section-header">
+                <div class="section-badge"><i class="fa-solid fa-microchip"></i> LIVE DEMO</div>
+                <h2>APK 線上解碼與重構動態模擬器</h2>
+                <p>選擇示範 APK 檔或拖放檔案，體驗真正的 `apktool d` 與 `apktool b` 工作流程與解碼成果。</p>
+            </div>
+
+            <div class="simulator-wrapper">
+                <!-- Top Toolbar -->
+                <div class="sim-toolbar">
+                    <div class="sim-selector">
+                        <label for="sample-select"><i class="fa-solid fa-box-archive"></i> 選擇示範 APK：</label>
+                        <select id="sample-select" class="form-select">
+                            <option value="demo_app">DemoApp_v1.0.apk (標準 Android 應用)</option>
+                            <option value="game_mod">GameMod_v2.4.apk (含多 Dex 檔與 Native Lib)</option>
+                            <option value="sys_framework">framework-res.apk (OEM 系統框架檔)</option>
+                        </select>
+                    </div>
+
+                    <!-- Drag and Drop Dropzone -->
+                    <div class="file-dropzone" id="dropzone">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>拖放本地 `.apk` 到此處模擬解碼</span>
+                    </div>
+
+                    <div class="sim-actions">
+                        <button id="btn-decode" class="btn btn-primary"><i class="fa-solid fa-folder-open"></i> 執行反編譯 (apktool d)</button>
+                        <button id="btn-build" class="btn btn-success" disabled><i class="fa-solid fa-hammer"></i> 執行回編譯 (apktool b)</button>
+                    </div>
+                </div>
+
+                <!-- Main Simulator Grid -->
+                <div class="sim-grid">
+                    <!-- Left: File Structure Explorer -->
+                    <div class="sim-card tree-card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-folder-tree"></i> 解碼檔案目錄結構 (`output_dir/`)
+                        </div>
+                        <div class="card-body tree-body" id="tree-container">
+                            <div class="empty-state" id="tree-placeholder">
+                                <i class="fa-solid fa-terminal"></i>
+                                <p>尚未執行解碼。請點擊「執行反編譯」開始分析 APK。</p>
+                            </div>
+                            <ul class="file-tree hidden" id="file-tree-root">
+                                <!-- Dynamic File Tree Content -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Middle: Code / Resource Editor -->
+                    <div class="sim-card editor-card">
+                        <div class="card-header flex-between">
+                            <span><i class="fa-solid fa-code"></i> 檔案檢視與線上編輯器：<strong id="current-filename">AndroidManifest.xml</strong></span>
+                            <span class="file-tag" id="file-type-tag">XML</span>
+                        </div>
+                        <div class="card-body editor-body">
+                            <textarea id="code-editor" class="code-textarea" spellcheck="false" placeholder="點選左側目錄檔案以開啟與編輯內容..."></textarea>
+                        </div>
+                        <div class="editor-footer">
+                            <span id="editor-status"><i class="fa-solid fa-circle-check"></i> 檔案就緒，修改後點擊「執行回編譯」測試打包。</span>
+                            <button id="btn-save-file" class="btn btn-small btn-secondary"><i class="fa-solid fa-floppy-disk"></i> 暫存修改</button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Terminal Output & Log -->
+                    <div class="sim-card log-card">
+                        <div class="card-header flex-between">
+                            <span><i class="fa-solid fa-terminal"></i> 執行終端機日誌 (Console Log)</span>
+                            <button id="btn-clear-log" class="btn btn-xs"><i class="fa-solid fa-trash"></i> 清除</button>
+                        </div>
+                        <div class="card-body log-body" id="console-log">
+                            <div class="log-line info">[資訊] Apktool 繁體中文模擬環境已初始化完成。</div>
+                            <div class="log-line ready">[提示] 請選擇 APK 檔並點擊「執行反編譯」以展開運作。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CLI Command Generator Section -->
+        <section id="cli-generator" class="section-container">
+            <div class="section-header">
+                <div class="section-badge"><i class="fa-solid fa-terminal"></i> COMMAND HELPER</div>
+                <h2>動態 CLI 指令生成器</h2>
+                <p>簡單勾選需求參數，即時產生標準 `apktool` 命令列指令與詳細繁體中文說明。</p>
+            </div>
+
+            <div class="generator-wrapper">
+                <div class="gen-controls">
+                    <div class="control-group">
+                        <label class="group-label"><i class="fa-solid fa-bars-staggered"></i> 操作模式：</label>
+                        <div class="radio-buttons">
+                            <label class="radio-label">
+                                <input type="radio" name="mode" value="d" checked>
+                                <span><i class="fa-solid fa-folder-open"></i> 反編譯/解碼 (d)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="mode" value="b">
+                                <span><i class="fa-solid fa-cube"></i> 回編譯/打包 (b)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="mode" value="if">
+                                <span><i class="fa-solid fa-puzzle-piece"></i> 匯入框架 (if)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="group-label"><i class="fa-solid fa-file-import"></i> 輸入檔案 / 目錄：</label>
+                        <input type="text" id="cli-input-path" class="form-input" value="app-release.apk">
+                    </div>
+
+                    <div class="control-group">
+                        <label class="group-label"><i class="fa-solid fa-file-export"></i> 輸出檔案 / 目錄 (-o)：</label>
+                        <input type="text" id="cli-output-path" class="form-input" value="app_decompiled">
+                    </div>
+
+                    <div class="control-group">
+                        <label class="group-label"><i class="fa-solid fa-sliders"></i> 進階旗標與選項：</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="flag-force" checked>
+                                <span><code>-f</code> / <code>--force</code> 強制覆寫已存在檔案</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="flag-no-res">
+                                <span><code>-r</code> / <code>--no-res</code> 忽略資源檔解碼 (提升速度)</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="flag-no-src">
+                                <span><code>-s</code> / <code>--no-src</code> 忽略 Dex/Smali 代碼解碼</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="flag-aapt2" checked>
+                                <span><code>--use-aapt2</code> 使用 AAPT2 進行解析打包</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="flag-match-original">
+                                <span><code>-m</code> / <code>--match-original</code> 保留原始檔案相容結構</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="flag-verbose">
+                                <span><code>-v</code> / <code>--verbose</code> 輸出詳細偵錯 Log 訊息</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gen-output-card">
+                    <div class="output-header">
+                        <span><i class="fa-solid fa-code"></i> 生成之命令列 (Generated Command)</span>
+                        <button id="btn-copy-cmd" class="btn btn-small btn-primary"><i class="fa-solid fa-copy"></i> 複製指令</button>
+                    </div>
+                    <div class="command-box">
+                        <code id="generated-command">apktool d app-release.apk -o app_decompiled -f --use-aapt2</code>
+                    </div>
+                    <div class="explanation-box">
+                        <h4><i class="fa-solid fa-circle-info"></i> 參數解讀說明 (繁體中文)：</h4>
+                        <ul id="command-explanation">
+                            <!-- Dynamic Explanations -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Smali Cheat Sheet Section -->
+        <section id="smali-guide" class="section-container">
+            <div class="section-header">
+                <div class="section-badge"><i class="fa-solid fa-book"></i> REFERENCE</div>
+                <h2>Smali 組合語言速查與教學</h2>
+                <p>Smali 是 Android Dalvik/ART 虛擬機的可讀組合語言。以下整理常見語法指令與範例。</p>
+            </div>
+
+            <div class="smali-wrapper">
+                <div class="search-bar-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="smali-search" class="form-input" placeholder="搜尋 Smali 指令（如：const-string, invoke-virtual, return）...">
+                </div>
+
+                <div class="smali-cards-grid" id="smali-grid">
+                    <!-- Smali Item 1 -->
+                    <div class="smali-card">
+                        <div class="card-tag">字串與數值</div>
+                        <h3>const-string v0, "Hello"</h3>
+                        <p class="smali-desc">將字串常數加載進暫存器 `v0` 中。</p>
+                        <div class="code-comparison">
+                            <div class="code-col">
+                                <div class="lang">Java Equivalent</div>
+                                <code>String text = "Hello";</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Smali Item 2 -->
+                    <div class="smali-card">
+                        <div class="card-tag">方法調用</div>
+                        <h3>invoke-virtual {v0, v1}, LMethod;</h3>
+                        <p class="smali-desc">調用物件的虛擬方法（Virtual Method），傳入暫存器參數。</p>
+                        <div class="code-comparison">
+                            <div class="code-col">
+                                <div class="lang">Java Equivalent</div>
+                                <code>object.doSomething(arg1);</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Smali Item 3 -->
+                    <div class="smali-card">
+                        <div class="card-tag">欄位存取</div>
+                        <h3>iget-object v0, p0, LClass;->field</h3>
+                        <p class="smali-desc">從目前物件（`p0`）中讀取物件欄位（Field）數值至暫存器 `v0`。</p>
+                        <div class="code-comparison">
+                            <div class="code-col">
+                                <div class="lang">Java Equivalent</div>
+                                <code>this.field = value;</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Smali Item 4 -->
+                    <div class="smali-card">
+                        <div class="card-tag">邏輯跳轉</div>
+                        <h3>if-eqz v0, :cond_0</h3>
+                        <p class="smali-desc">若暫存器 `v0` 等於 0 (null / false)，跳轉至標籤 `:cond_0`。</p>
+                        <div class="code-comparison">
+                            <div class="code-col">
+                                <div class="lang">Java Equivalent</div>
+                                <code>if (flag == false) { ... }</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Smali Item 5 -->
+                    <div class="smali-card">
+                        <div class="card-tag">傳回值</div>
+                        <h3>return-void</h3>
+                        <p class="smali-desc">代表無傳回值（void）之方法結束指令。</p>
+                        <div class="code-comparison">
+                            <div class="code-col">
+                                <div class="lang">Java Equivalent</div>
+                                <code>return;</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Smali Item 6 -->
+                    <div class="smali-card">
+                        <div class="card-tag">取得回傳值</div>
+                        <h3>move-result-object v0</h3>
+                        <p class="smali-desc">取得上一次方法調用所傳回之物件引用，存入 `v0`。</p>
+                        <div class="code-comparison">
+                            <div class="code-col">
+                                <div class="lang">Java Equivalent</div>
+                                <code>Object res = method();</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architecture & Flow Section -->
+        <section id="architecture" class="section-container">
+            <div class="section-header">
+                <div class="section-badge"><i class="fa-solid fa-diagram-project"></i> ARCHITECTURE</div>
+                <h2>Apktool 運作架構與核心原理</h2>
+                <p>理解 APK 解包、Dex -> Smali 轉換、資源重建與重構封裝的全脈絡運作圖解。</p>
+            </div>
+
+            <div class="flow-container">
+                <div class="flow-step">
+                    <div class="step-num">01</div>
+                    <div class="step-icon"><i class="fa-solid fa-file-zipper"></i></div>
+                    <h3>APK 二進位解包</h3>
+                    <p>APK 本質為 ZIP 封包。Apktool 將其解開並分離 `classes.dex`、`resources.arsc`、`AndroidManifest.xml` 與 `res/`。</p>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-angle-right"></i></div>
+
+                <div class="flow-step">
+                    <div class="step-num">02</div>
+                    <div class="step-icon"><i class="fa-solid fa-code-compare"></i></div>
+                    <h3>Baksmali & 資源解析</h3>
+                    <p>利用 Baksmali 將位元組碼拆解為人類可讀之 Smali，同時將二進位 XML 轉換為標準可編輯 XML 文字。</p>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-angle-right"></i></div>
+
+                <div class="flow-step">
+                    <div class="step-num">03</div>
+                    <div class="step-icon"><i class="fa-solid fa-pen-to-square"></i></div>
+                    <h3>開發者修訂與在地化</h3>
+                    <p>使用者進行繁體中文化、程式碼注入、佈局微調或套用修補檔。</p>
+                </div>
+                <div class="flow-arrow"><i class="fa-solid fa-angle-right"></i></div>
+
+                <div class="flow-step">
+                    <div class="step-num">04</div>
+                    <div class="step-icon"><i class="fa-solid fa-hammer"></i></div>
+                    <h3>Smali 彙編與 AAPT2 重建</h3>
+                    <p>將修改後的 Smali 組裝回 `classes.dex`，並由 AAPT2 重新編譯資源並打包為全新二進位 APK。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Documentation Tabs Section -->
+        <section id="docs" class="section-container">
+            <div class="section-header">
+                <div class="section-badge"><i class="fa-solid fa-book-open"></i> DOCUMENTATION</div>
+                <h2>繁體中文技術說明手冊</h2>
+                <p>涵蓋安裝配置、OEM 框架檔匯入、APK 重建金鑰簽署與常出現疑難排解。</p>
+            </div>
+
+            <div class="docs-tab-wrapper">
+                <div class="docs-nav-tabs">
+                    <button class="doc-tab-btn active" data-tab="tab-install"><i class="fa-solid fa-download"></i> 安裝與環境建置</button>
+                    <button class="doc-tab-btn" data-tab="tab-framework"><i class="fa-solid fa-cubes"></i> 框架檔 (Framework) 管理</button>
+                    <button class="doc-tab-btn" data-tab="tab-sign"><i class="fa-solid fa-key"></i> APK 重建與金鑰簽署</button>
+                    <button class="doc-tab-btn" data-tab="tab-faq"><i class="fa-solid fa-circle-question"></i> 常見問題 (FAQ)</button>
+                </div>
+
+                <div class="docs-content">
+                    <!-- Tab 1 -->
+                    <div class="doc-pane active" id="tab-install">
+                        <h3><i class="fa-solid fa-laptop"></i> 各作業系統安裝說明</h3>
+                        <div class="doc-body">
+                            <h4>1. Windows 環境</h4>
+                            <ol>
+                                <li>下載最新版 <code>apktool_x.x.x.jar</code> 並重新命名為 <code>apktool.jar</code>。</li>
+                                <li>下載 Windows 批次檔腳本 <code>apktool.bat</code>。</li>
+                                <li>將上述兩檔案移動至系統路徑目錄（例如 <code>C:\Windows</code> 或放置於自訂資料夾並加入環境變數 <code>PATH</code>）。</li>
+                                <li>開啟 PowerShell 或 CMD 視窗輸入 <code>apktool</code> 即可啟動。</li>
+                            </ol>
+                            <h4>2. macOS / Linux 環境</h4>
+                            <pre><code># 賦予執行權限並移動至 usr local bin
+chmod +x apktool.sh apktool.jar
+sudo mv apktool.sh /usr/local/bin/apktool
+sudo mv apktool.jar /usr/local/bin/apktool.jar
+apktool --version</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2 -->
+                    <div class="doc-pane" id="tab-framework">
+                        <h3><i class="fa-solid fa-cubes"></i> 系統層框架檔 (Framework) 之安裝與使用</h3>
+                        <div class="doc-body">
+                            <p>部分由手機原廠（如 Samsung, Xiaomi, LG 等）客製之系統 APK，在解碼時會引用原廠非標準的資源 ID。此時需先從手機的 <code>/system/framework</code> 目錄提取 <code>framework-res.apk</code> 並匯入：</p>
+                            <pre><code># 匯入原廠框架檔
+apktool if framework-res.apk
+
+# 解碼時引用已匯入之框架
+apktool d system_app.apk</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3 -->
+                    <div class="doc-pane" id="tab-sign">
+                        <h3><i class="fa-solid fa-key"></i> APK 重建後之簽署 (Resigning APK)</h3>
+                        <div class="doc-body">
+                            <p>經由 <code>apktool b</code> 重建產出之 APK 檔未具備數位簽署，直接安裝於 Android 裝置將會回報 <code>INSTALL_PARSE_FAILED_NO_CERTIFICATES</code> 錯誤。請使用 Uber-APK-Signer 或 standard apksigner 進行簽署：</p>
+                            <pre><code># 產生測試金鑰
+keytool -genkey -v -keystore my-key.keystore -alias my-alias -keyalg RSA -keysize 2048 -validity 10000
+
+# 簽署新建構之 APK
+apksigner sign --ks my-key.keystore new_target.apk</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Tab 4 -->
+                    <div class="doc-pane" id="tab-faq">
+                        <h3><i class="fa-solid fa-circle-question"></i> 常見問題與除錯經驗</h3>
+                        <div class="doc-body">
+                            <div class="faq-item">
+                                <h4>Q: 為何反編譯時出現 <code>CantFindFrameworkResException</code> 錯誤？</h4>
+                                <p>答：這代表該 APK 引用了系統層限定資源。請依據「框架檔管理」步驟匯入對應手機原廠 ROM 的 <code>framework-res.apk</code>。</p>
+                            </div>
+                            <div class="faq-item">
+                                <h4>Q: 回編譯時出現 <code>aapt: error: resource ... not found</code>？</h4>
+                                <p>答：請嘗試加上 <code>--use-aapt2</code> 旗標使用 AAPT2 重建，或檢查 `res/values/public.xml` 中的資源 ID 聲明是否正確。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <i class="fa-solid fa-cube"></i> Apktool 繁體中文開放原始碼專案
+            </div>
+            <p>GitHub Repository: <a href="https://github.com/10041862top/14" target="_blank">github.com/10041862top/14</a> | Apache License 2.0</p>
+            <p class="copyright">&copy; 2026 Apktool Traditional Chinese Project. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
