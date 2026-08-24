@@ -155,11 +155,26 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const path of filePaths) {
                 const zipEntry = loadedZip.files[path];
                 if (!zipEntry.dir) {
-                    if (isTextFile(path)) {
+                    const binaryContent = await zipEntry.async("uint8array");
+                    
+                    if (path.endsWith('AndroidManifest.xml') || (path.startsWith('res/') && path.endsWith('.xml'))) {
+                        // Decode Android Binary XML
+                        log(`[AXML 晶片解碼器] 解碼二進位 XML 結構: ${path}`);
+                        const decoder = new AXMLDecoder(binaryContent);
+                        currentZipFiles[path] = decoder.decode();
+                    } else if (path.endsWith('.dex')) {
+                        // Disassemble Dex to Smali
+                        log(`[DEX 轉譯器] 解析 Dalvik 位元組碼 -> Smali 語言: ${path}`);
+                        const disasm = new DEXDisassembler(binaryContent);
+                        const smaliText = disasm.disassemble();
+                        if (smaliText) {
+                            currentZipFiles[`smali/disassembled_${path.replace('.dex', '')}.smali`] = smaliText;
+                        }
+                        currentZipFiles[path] = binaryContent;
+                    } else if (isTextFile(path)) {
                         const textContent = await zipEntry.async("string");
                         currentZipFiles[path] = textContent;
                     } else {
-                        const binaryContent = await zipEntry.async("uint8array");
                         currentZipFiles[path] = binaryContent;
                     }
                 }

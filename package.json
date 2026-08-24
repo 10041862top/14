@@ -1,0 +1,30 @@
+{
+  "name": "apktool-zh-tw-showcase",
+  "version": "3.0.0",
+  "description": "Apktool 繁體中文化專案與全功能 Web 控制平臺",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
+    "multer": "^1.4.5-lts.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/10041862top/14.git"
+  },
+  "keywords": [
+    "apktool",
+    "android",
+    "reverse-engineering",
+    "smali",
+    "traditional-chinese",
+    "decompilation"
+  ],
+  "author": "RAY (10041862top)",
+  "license": "Apache-2.0"
+}
