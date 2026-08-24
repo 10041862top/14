@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let rebuiltBlob = null;
 
     // DOM Elements
+    const btnHeroShowcase = document.getElementById('btn-hero-showcase');
+    const btnHeroLive = document.getElementById('btn-hero-live');
     const sampleSelect = document.getElementById('sample-select');
     const btnDecode = document.getElementById('btn-decode');
     const btnBuild = document.getElementById('btn-build');
@@ -45,8 +47,38 @@ document.addEventListener('DOMContentLoaded', () => {
         consoleLog.scrollTop = consoleLog.scrollHeight;
     }
 
-    btnClearLog?.addEventListener('click', () => {
-        consoleLog.innerHTML = '<div class="log-line info">[資訊] 日誌已清理。</div>';
+    // --- Showcase Tour Auto-Demo Function ---
+    async function startShowcaseTour() {
+        log(`[展演模式] 啟動 Apktool 繁體中文全功能展示導覽...`, 'ready');
+        selectedFileObject = null;
+        originalFileName = 'DemoApp_v1.0.apk';
+        dropzone.querySelector('span').textContent = `展演展示檔: ${originalFileName}`;
+        
+        // Step 1: Decode
+        btnDecode.click();
+
+        setTimeout(() => {
+            log(`[展演模式] 正在展演檔案編輯：修改資源檔 res/values/strings.xml...`, 'warning');
+            const targetPath = 'res/values/strings.xml';
+            if (currentZipFiles[targetPath]) {
+                openRealFile(targetPath);
+                codeEditor.value = codeEditor.value.replace('Apktool 繁體中文示範應用', 'Apktool 繁體中文示範應用 (展示修改版)');
+                btnSaveFile.click();
+            }
+        }, 3200);
+
+        setTimeout(() => {
+            log(`[展演模式] 自動執行重構打包流程 (apktool b)...`, 'ready');
+            btnBuild.click();
+        }, 5000);
+    }
+
+    btnHeroShowcase?.addEventListener('click', (e) => {
+        startShowcaseTour();
+    });
+
+    btnHeroLive?.addEventListener('click', () => {
+        log(`[模式切換] 已切換為實體檔案操作模式。您可以選取或拖放本地 APK 進行逆向。`, 'info');
     });
 
     // File Selector Dropzone Trigger
